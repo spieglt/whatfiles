@@ -2,7 +2,7 @@
 Whatfiles is a Linux utility that logs what files other programs read/write/create/delete on your system. It traces any new processes and threads that are created as well.
 
 ## Rationale:
-I've long been frustrated at the lack of a simple utility to see which files a process touches from `main()` to exit. Whether you don't trust a software vendor or are concerned about malware, it's important to be able to know what a program or installer does to your system. There's `lsof` for *nix, but it only observes a moment in time. There's `strace` for Linux and `dtruss` for Mac, but they're complicated and intimidating to many people and have a wide range of use cases. There's Process Explorer for Windows, but it only gives you slices in time also.
+I've long been frustrated at the lack of a simple utility to see which files a process touches from `main()` to exit. Whether you don't trust a software vendor or are concerned about malware, it's important to be able to know what a program or installer does to your system. `lsof` only observes a moment in time and `strace` is large and somewhat complicated.
 
 ## Sample output:
 ```
@@ -60,7 +60,7 @@ $ sudo make install
 
 - _Are there Mac and Windows versions?_
 
-  Not for the time being. Tracing syscalls on Mac requires `task_for_pid()`, which requires code signing, which I can't get to work, and anyway I have no interest in paying Apple $100/year to write free software. I would be interested in writing a version for Windows at some point but it would have to be a complete rewrite and a steep learning curve.
+  No. Tracing syscalls on Mac requires `task_for_pid()`, which requires code signing, which I can't get to work, and anyway I have no interest in paying Apple $100/year to write free software. Process Monitor for Windows is pretty great.
 
 ## Known issues:
 
