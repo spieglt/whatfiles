@@ -15,6 +15,8 @@
 
 FILE *Handle = (FILE*)NULL;
 int Debug = 0;
+LastSyscall_t LastSyscall;
+DebugStats_t DebugStats;
 
 // looks at the current syscall and outputs its information if it's one we're interested in
 void check_syscall(pid_t current_pid, struct user_regs_struct regs, HashMap map)
