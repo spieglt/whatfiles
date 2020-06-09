@@ -7,8 +7,8 @@
 
 #include "hashmap.h"
 
-int Debug;
-FILE *Handle;
+extern int Debug;
+extern FILE *Handle;
 
 #define MODE_LEN 32
 #define OUTPUT(...) fprintf(Handle, __VA_ARGS__)
@@ -23,10 +23,12 @@ FILE *Handle;
         exit(err);                           \
     }
 
-struct {
+typedef struct {
     pid_t pid;
     unsigned long long syscall;
-} LastSyscall;
+} LastSyscall_t;
+
+extern LastSyscall_t LastSyscall;
 
 // utilities.c
 void build_output(

@@ -39,9 +39,11 @@ HashError decrement(pid_t key, HashMap map);
 HashError set_name(pid_t key, char *name, HashMap map);
 HashError get_name(pid_t key, HashMap map, struct String *name);
 
-struct {
+typedef struct {
     int collisions;
     int steps;
-} DebugStats;
+} DebugStats_t;
+
+extern DebugStats_t DebugStats;
 
 #endif /* !HASHMAP_H */
