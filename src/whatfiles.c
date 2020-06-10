@@ -187,7 +187,9 @@ bool step_syscall(pid_t current_pid, int proc_status, HashMap map)
         res = ptrace(PTRACE_SYSCALL, current_pid, 0, 0);
         if (res == -1L) DEBUG("ptrace() failed to resume");
     } else {
-        DEBUG("can't get registers\n");
+        DEBUG("can't get registers, detaching from %d\n", current_pid);
+        res = ptrace(PTRACE_DETACH, current_pid, 0, 0); // "Under Linux, a tracee can be detached in this way regardless of which method was used to initiate tracing."
+        if (res == -1L) DEBUG("ptrace() failed to detach from %d\n", current_pid);
     }
     return could_read;
 }
@@ -305,15 +307,17 @@ int main(int argc, char* argv[])
         }
         // catch any traced process' or thread's next state change
         pid = wait(&status);
-        if (pid == -1) SYS_ERR("waiting for any child process failed");
+        if (pid == -1) SYS_ERR("whatfiles exiting");
         if (WIFEXITED(status) || WIFSIGNALED(status)) {
-            DEBUG("exited %d at entry to syscall\n", pid);
+            DEBUG("PID %d exited", pid);
+            // ok if this fails in case of process not in hashmap
             err = remove_pid(pid, hashmap);
-            DEBUG("deletion of %d from hashmap failed\n", pid);
-        }
-        if (WIFSTOPPED(status)) {
+            if (err) DEBUG(", was not in map", pid);
+            DEBUG("\n");
+        } else if (WIFSTOPPED(status)) {
             /*bool could_read = */ step_syscall(pid, status, hashmap);
         }
+
         if (hashmap->used == 0) {
             DEBUG("all children exited\n");
             break;

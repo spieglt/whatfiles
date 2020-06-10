@@ -64,7 +64,7 @@ $ sudo make install
 
 ## Known issues:
 
-- Seems to run slowly and occasionally freeze when used to launch Firefox and Chromium. (Attaching to both with `-p [PID]` once they're running works fine.)
+- Tabs crash when `whatfiles` is used to launch Firefox. (Attaching with `-p [PID]` once it's running works fine, as does using `whatfiles` to launch a second Firefox window if one's already open.)
 
 
 Thank you for your interest, and please also check out [Cloaker](https://github.com/spieglt/cloaker), [Nestur](https://github.com/spieglt/nestur), and [Flying Carpet](https://github.com/spieglt/flyingcarpet)!
