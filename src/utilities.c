@@ -68,8 +68,8 @@ void get_command(pid_t current_pid, char *command, size_t len)
     proc_file = fopen(proc_str, "r");
     if (proc_file) {
         getline(&command, &len, proc_file);
+        fclose(proc_file);
     }
-    fclose(proc_file);
 }
 
 bool peek_filename(pid_t pid, unsigned long long p_reg, struct String *str)

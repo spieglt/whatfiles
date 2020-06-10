@@ -50,20 +50,23 @@ char read_status(pid_t pid)
         c = *(str->data + pmatch[1].rm_so);
     }
     free(str->data);
+    fclose(h_status);
     return c;
 }
 
-void read_task(pid_t tid, struct String *str)
+bool read_task(pid_t tid, struct String *str)
 {
     char path[128] = {0};
     sprintf(path, "/proc/%d/comm", tid);
     FILE *h_comm = fopen(path, "rb");
     if (!h_comm) {
-        fprintf(stderr, "tried to read nonexistent /proc/%d/comm\n", tid);
-        exit(1);
+        DEBUG("tried to read nonexistent /proc/%d/comm\n", tid);
+        return false;
     }
     read_file(str, 4096, h_comm);
     if (str->data[str->len-1] == '\n') delete_char(str); // remove newline if present
+    fclose(h_comm);
+    return str->len > 0;
 }
 
 int attach_to_process(pid_t pid, HashMap map)
@@ -118,8 +121,9 @@ int attach_to_process(pid_t pid, HashMap map)
         insert(tid[t], 0, map);
         struct String str = {0};
         init_string(&str, 4096);
-        read_task(tid[t], &str);
-        set_name(tid[t], str.data, map);
+        if (read_task(tid[t], &str)) {
+            set_name(tid[t], str.data, map);
+        }
         free(str.data);
     }
 
@@ -137,7 +141,7 @@ int attach_to_process(pid_t pid, HashMap map)
 }
 
 // used upon exit as signal handler when whatfiles was used to attach to a process already in progress
-void detatch_from_process(HashMap map)
+void detach_from_process(HashMap map)
 {
     for (int i = 0; i < map->size; i++) {
         pid_t pid = map->keys[i];
@@ -154,17 +158,17 @@ void detatch_from_process(HashMap map)
                 nanosleep(&ts, &ts);
                 DEBUG("waiting for PID %d to stop\n", pid);
                 if (counter > 9) {
-                    DEBUG("could not detatch from PID %d\n", pid);
+                    DEBUG("could not detach from PID %d\n", pid);
                     break;
                 }
                 counter++;
             }
-            if (counter > 9) continue; // if we weren't able to detatch from this process, move on
+            if (counter > 9) continue; // if we weren't able to detach from this process, move on
             do {
                 r = ptrace(PTRACE_DETACH, pid, (void *)0, (void *)0);
             } while (r == -1L && (errno == EBUSY || errno == EFAULT || errno == ESRCH));
-            if (r == -1) fprintf(stderr, "error detatching from PID %d\n", pid);
-            else DEBUG("detatched from process %d\n", pid);
+            if (r == -1) fprintf(stderr, "error detaching from PID %d\n", pid);
+            else DEBUG("detached from process %d\n", pid);
             kill(pid, SIGCONT);
         }
     }

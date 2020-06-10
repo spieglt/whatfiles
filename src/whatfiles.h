@@ -53,9 +53,9 @@ void about();
 // attach.c
 size_t get_tids(pid_t **const listptr, size_t *const sizeptr, const pid_t pid);
 int attach_to_process(pid_t pid, HashMap map);
-void detatch_from_process(HashMap map);
+void detach_from_process(HashMap map);
 void read_file(struct String *str, size_t size, FILE *file);
 char read_status(pid_t pid);
-void read_task(pid_t tid, struct String *str);
+bool read_task(pid_t tid, struct String *str);
 
 #endif /* !WHATFILES_H */

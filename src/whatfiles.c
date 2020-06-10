@@ -34,6 +34,10 @@ void check_syscall(pid_t current_pid, struct user_regs_struct regs, HashMap map)
     size_t index;
     HashError err = find_index(current_pid, map, &index);
     if (err) DEBUG("unknown pid %d, syscall %lld\n", current_pid, regs.orig_rax);
+    // struct String *proc_string = err ? NULL : &map->names[index];
+    // char *proc_name = proc_string && proc_string->data && *proc_string->data
+    //     ? proc_string->data
+    //     : "[unknown]";
 
     switch (regs.orig_rax)
     {
@@ -84,7 +88,7 @@ void check_syscall(pid_t current_pid, struct user_regs_struct regs, HashMap map)
         OUTPUT("%s", output.data);
         break;
     default:
-        // DEBUG("syscall: %lld, pid: %d\n", regs.orig_rax, current_pid);
+        // DEBUG("syscall: %lld, pid: %d, %s\n", regs.orig_rax, current_pid, proc_name);
         break;
     }
     free(filename.data);
@@ -99,26 +103,32 @@ void check_ptrace_event(pid_t current_pid, int proc_status, HashMap map)
 
     unsigned long ptrace_event;
     long res = ptrace(PTRACE_GETEVENTMSG, current_pid, (char*)0, &ptrace_event);
-    if (res == -1L) SYS_ERR("ptrace() failed to get event msg");
+    if (res == -1L) {
+        DEBUG("ptrace() failed to get event msg");
+        return;
+    }
     switch (proc_status >> 8)
     {
     case SIGTRAP | (PTRACE_EVENT_FORK << 8):
         DEBUG("caught PTRACE_EVENT_FORK from pid %d. new pid: %ld\n", current_pid, ptrace_event);
         insert((pid_t)ptrace_event, ENTRY, map);
-        read_task((pid_t)ptrace_event, &new_proc);
-        set_name((pid_t)ptrace_event, new_proc.data, map);
+        if (read_task((pid_t)ptrace_event, &new_proc)) {
+            set_name((pid_t)ptrace_event, new_proc.data, map);
+        }
         break;
     case SIGTRAP | (PTRACE_EVENT_CLONE << 8):
         DEBUG("caught PTRACE_EVENT_CLONE from pid %d. new pid: %ld\n", current_pid, ptrace_event);
         insert((pid_t)ptrace_event, ENTRY, map);
-        read_task((pid_t)ptrace_event, &new_proc);
-        set_name((pid_t)ptrace_event, new_proc.data, map);
+        if (read_task((pid_t)ptrace_event, &new_proc)) {
+            set_name((pid_t)ptrace_event, new_proc.data, map);
+        }
         break;
     case SIGTRAP | (PTRACE_EVENT_VFORK << 8):
         DEBUG("caught PTRACE_EVENT_VFORK from pid %d. new pid: %ld\n", current_pid, ptrace_event);
         insert((pid_t)ptrace_event, ENTRY, map);
-        read_task((pid_t)ptrace_event, &new_proc);
-        set_name((pid_t)ptrace_event, new_proc.data, map);
+        if (read_task((pid_t)ptrace_event, &new_proc)) {
+            set_name((pid_t)ptrace_event, new_proc.data, map);
+        }
         break;
     case SIGTRAP | (PTRACE_EVENT_EXEC << 8):
         DEBUG("caught PTRACE_EVENT_EXEC from pid %d. former pid: %ld\n", current_pid, ptrace_event);
@@ -148,31 +158,38 @@ void check_ptrace_event(pid_t current_pid, int proc_status, HashMap map)
     free(new_proc.data);
 }
 
-void step_syscall(pid_t current_pid, int proc_status, HashMap map)
+bool step_syscall(pid_t current_pid, int proc_status, HashMap map)
 {
     long res;
-    struct user_regs_struct regs;  
-
+    struct user_regs_struct regs;
+    bool could_read = false;
     // get current register values
-    do {
-        res = ptrace(PTRACE_GETREGS, current_pid, &regs, &regs);
-    } while (res == -1L && errno == ESRCH);
-    if (res == -1L && errno != ESRCH) SYS_ERR("ptrace() failed to get registers");
-
-    // If it's the same PID performing the same syscall (has same orig_rax) as last time, we don't care. Just means it's exiting the syscall.
-    // Might want to keep for debug mode? This might result in missing some output, in the case where two threads of the same process enter the same syscall before either exits,
-    // because they will both return the same PID to wait() when given SIGTRAP as part of the syscall-enter-exit loop. Might also result in double-printing,
-    // because if two threads (that report the same PID) enter two different syscalls before either exits, the "last" syscall for the PID won't be the entry by that thread.
-    if (!is_exiting(current_pid, regs.orig_rax) /*|| Debug*/) {
-        check_syscall(current_pid, regs, map);
+    // TODO: make this fault tolerant to a dead PID
+    res = ptrace(PTRACE_GETREGS, current_pid, &regs, &regs);
+    if (res == -1L) {
+        DEBUG("CURRENT PID: %d, failed to get registers\n", current_pid);
     }
-    LastSyscall.pid = current_pid;
-    LastSyscall.syscall = regs.orig_rax;
-    check_ptrace_event(current_pid, proc_status, map);
-    // continue, catching next entry or exit from syscall
-    res = ptrace(PTRACE_SYSCALL, current_pid, 0, 0);
-    if (res == -1L) SYS_ERR("ptrace() failed to resume");
-    fflush(stdout);
+
+    // can't get some registers for some reason
+    if (regs.orig_rax != -1) {
+        could_read = true;
+        // If it's the same PID performing the same syscall (has same orig_rax) as last time, we don't care. Just means it's exiting the syscall.
+        // Might want to keep for debug mode? This might result in missing some output, in the case where two threads of the same process enter the same syscall before either exits,
+        // because they will both return the same PID to wait() when given SIGTRAP as part of the syscall-enter-exit loop. Might also result in double-printing,
+        // because if two threads (that report the same PID) enter two different syscalls before either exits, the "last" syscall for the PID won't be the entry by that thread.
+        if (!is_exiting(current_pid, regs.orig_rax) /*|| Debug*/) {
+            check_syscall(current_pid, regs, map);
+        }
+        LastSyscall.pid = current_pid;
+        LastSyscall.syscall = regs.orig_rax;
+        check_ptrace_event(current_pid, proc_status, map);
+        // continue, catching next entry or exit from syscall
+        res = ptrace(PTRACE_SYSCALL, current_pid, 0, 0);
+        if (res == -1L) DEBUG("ptrace() failed to resume");
+    } else {
+        DEBUG("can't get registers\n");
+    }
+    return could_read;
 }
 
 int main(int argc, char* argv[])
@@ -209,7 +226,6 @@ int main(int argc, char* argv[])
     }
 
     DEBUG("whatfiles pid: %d\n", getpid());
-    fflush(stdout);
 
     if (attach) {
         OUTPUT("attaching to pid %d\n", pid);
@@ -219,7 +235,6 @@ int main(int argc, char* argv[])
         // child process starts here
         if((pid = fork()) == 0) {
             DEBUG("whatfiles child pid: %d\n", getpid());
-            fflush(stdout);
             sys_err = ptrace(PTRACE_TRACEME, 0, 0, 0);
             if (sys_err == -1) SYS_ERR("ptrace() failed to TRACEME");
             /*
@@ -269,7 +284,7 @@ int main(int argc, char* argv[])
     // options should be in place and all processes/threads should be resumed with PTRACE_SYSCALL
 
     // if we're attaching to a process already in progress, block SIGINT and SIGTERM signals
-    // so that we can detatch from everything if whatfiles is closed while the process is still running
+    // so that we can detach from everything if whatfiles is closed while the process is still running
     sigset_t block_mask, pending_mask;
     if (attach) {
         sigemptyset(&block_mask);
@@ -284,26 +299,23 @@ int main(int argc, char* argv[])
             sigpending(&pending_mask);
             if (sigismember(&pending_mask, SIGINT) || sigismember(&pending_mask, SIGTERM)) {
                 DEBUG("pending signal caught\n");
-                detatch_from_process(hashmap);
+                detach_from_process(hashmap);
                 exit(errno);
             }
         }
         // catch any traced process' or thread's next state change
-        // can't call wait here if we don't actually have a child process...
         pid = wait(&status);
         if (pid == -1) SYS_ERR("waiting for any child process failed");
-        if (WIFEXITED(status)) {
+        if (WIFEXITED(status) || WIFSIGNALED(status)) {
             DEBUG("exited %d at entry to syscall\n", pid);
-            fflush(stdout);
             err = remove_pid(pid, hashmap);
-            HASH_ERR_CHECK(err, "deletion from hashmap failed.");
+            DEBUG("deletion of %d from hashmap failed\n", pid);
         }
         if (WIFSTOPPED(status)) {
-            step_syscall(pid, status, hashmap);
+            /*bool could_read = */ step_syscall(pid, status, hashmap);
         }
         if (hashmap->used == 0) {
             DEBUG("all children exited\n");
-            fflush(stdout);
             break;
         }
     }
