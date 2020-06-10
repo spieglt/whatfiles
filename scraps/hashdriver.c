@@ -15,6 +15,8 @@
         init_hashmap(map); \
     }
 
+DebugStats_t DebugStats = {0};
+
 void insert_test(HashMap map, bool with_names) {
     int num = 100000;
     for (int i = 0; i < num; i++) {
