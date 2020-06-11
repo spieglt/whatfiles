@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
             DEBUG("PID %d exited", pid);
             // ok if this fails in case of process not in hashmap
             err = remove_pid(pid, hashmap);
-            if (err) DEBUG(", was not in map", pid);
+            if (err) DEBUG(", was not in map");
             DEBUG("\n");
         } else if (WIFSTOPPED(status)) {
             /*bool could_read = */ step_syscall(pid, status, hashmap);
