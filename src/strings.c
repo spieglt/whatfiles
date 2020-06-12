@@ -7,7 +7,7 @@
 // new String pointers must be zeroed before being handed to this function
 void init_string(struct String *str, size_t initial_capacity)
 {
-    if (str->data) free(str->data);
+    free(str->data);
     str->data = malloc(initial_capacity);
     if (str->data == NULL) {
         perror("malloc() failed");

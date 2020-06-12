@@ -93,9 +93,7 @@ HashError destroy(HashMap map)
     }
     // this loop never fired because I had map->size = 0 at the top. I'm an idiot.
     for (int i = 0; i < map->size; i++) {
-        if (map->names[i].data) {
-            free(map->names[i].data);
-        }
+        free(map->names[i].data);
     }
     free(map->keys);
     free(map->status);
@@ -182,9 +180,7 @@ HashError remove_pid(pid_t pid, HashMap map)
     if (res == OK) {
         map->keys[idx] = 0;
         map->status[idx] = 0;
-        if (map->names[idx].data) {
-            free(map->names[idx].data);
-        }
+        free(map->names[idx].data);
         struct String zeroed = {0};
         map->names[idx] = zeroed;
         map->used--;
