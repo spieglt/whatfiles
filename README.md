@@ -64,6 +64,8 @@ $ sudo make install
 
 ## Known issues:
 
+- Only works on x86_64. If you would like to run it on another architecture, please let me know. I've had one request for ARM so far.
+
 - Tabs crash when `whatfiles` is used to launch Firefox. (Attaching with `-p [PID]` once it's running works fine, as does using `whatfiles` to launch a second Firefox window if one's already open.)
 
 
