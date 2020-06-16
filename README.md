@@ -60,7 +60,7 @@ $ sudo make install
 
 - _Are there Mac and Windows versions?_
 
-  No. Tracing syscalls on Mac requires `task_for_pid()`, which requires code signing, which I can't get to work, and anyway I have no interest in paying Apple $100/year to write free software. Process Monitor for Windows is pretty great.
+  No. Tracing syscalls on Mac requires `task_for_pid()`, which requires code signing, which I can't get to work, and anyway I have no interest in paying Apple $100/year to write free software. `dtruss` on Mac can be used to follow a single process and its children, though the `-t` flag seems to only accept a single syscall to filter on. `fs_usage` does something similar though I'm not sure if it follows child processes/threads. Process Monitor for Windows is pretty great.
 
 ## Known issues:
 
