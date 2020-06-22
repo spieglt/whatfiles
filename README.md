@@ -64,9 +64,12 @@ $ sudo make install
 
 ## Known issues:
 
-- Only works on x86_64. If you would like to run it on another architecture, please let me know. I've had one request for ARM so far.
+- Only works on x86_64.
 
 - Tabs crash when `whatfiles` is used to launch Firefox. (Attaching with `-p [PID]` once it's running works fine, as does using `whatfiles` to launch a second Firefox window if one's already open.)
 
+## Planned features:
+
+- Support ARM64. I've ordered a Raspberry Pi for the purpose.
 
 Thank you for your interest, and please also check out [Cloaker](https://github.com/spieglt/cloaker), [Nestur](https://github.com/spieglt/nestur), and [Flying Carpet](https://github.com/spieglt/flyingcarpet)!
