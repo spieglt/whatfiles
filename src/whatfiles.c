@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
-#include <sys/user.h>
 #include <sys/wait.h>
 
 #include "whatfiles.h"
