@@ -37,7 +37,7 @@ void check_ptrace_event(pid_t current_pid, int proc_status, HashMap map);
 void build_output(
     char *mode,
     char *syscall_name,
-    unsigned long long reg,
+    unsigned long reg,
     pid_t pid,
     struct String *filename,
     struct String *result,

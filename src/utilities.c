@@ -12,7 +12,7 @@ char *FLAGS = "ado:p:s";
 void build_output(
     char *mode,
     char *syscall_name,
-    unsigned long long reg,
+    unsigned long reg,
     pid_t pid,
     struct String *filename,
     struct String *result,
@@ -25,7 +25,7 @@ void build_output(
 
     char mode_str[MODE_LEN] = {0};
     // grab detected mode or the raw number
-    *mode ? sprintf(mode_str, "%5s", mode) : sprintf(mode_str, "0x%llX", reg);
+    *mode ? sprintf(mode_str, "%5s", mode) : sprintf(mode_str, "0x%lX", reg);
     append_str("mode: ", strlen("mode: "), result);
     append_str(mode_str, strlen(mode_str), result);
 

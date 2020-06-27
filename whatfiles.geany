@@ -28,7 +28,7 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=7
+current_page=8
 FILE_NAME_0=0;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Farmv7l%2Fregisters.c;0;4
 FILE_NAME_1=0;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fattach.c;0;4
 FILE_NAME_2=0;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fhashmap.c;0;4
@@ -36,8 +36,8 @@ FILE_NAME_3=0;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fhashmap.h;0;4
 FILE_NAME_4=0;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fstrings.c;0;4
 FILE_NAME_5=0;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fstrings.h;0;4
 FILE_NAME_6=0;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Futilities.c;0;4
-FILE_NAME_7=0;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fwhatfiles.c;0;4
-FILE_NAME_8=0;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fwhatfiles.h;0;4
+FILE_NAME_7=166;C;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fwhatfiles.c;0;4
+FILE_NAME_8=1468;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2Fwhatfiles%2Fsrc%2Fwhatfiles.h;0;4
 FILE_NAME_9=0;C++;0;EUTF-8;1;1;0;%2Fusr%2Finclude%2Farm-linux-gnueabihf%2Fasm%2Fptrace.h;0;4
 FILE_NAME_10=0;C++;0;EUTF-8;0;1;0;%2Fusr%2Finclude%2Farm-linux-gnueabihf%2Fsys%2Fptrace.h;0;2
 FILE_NAME_11=0;C++;0;EUTF-8;1;1;0;%2Fusr%2Finclude%2Flinux%2Fptrace.h;0;4
