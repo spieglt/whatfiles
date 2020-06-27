@@ -72,7 +72,7 @@ void get_command(pid_t current_pid, char *command, size_t len)
     }
 }
 
-bool peek_filename(pid_t pid, unsigned long long p_reg, struct String *str)
+bool peek_filename(pid_t pid, unsigned long p_reg, struct String *str)
 {
     char get_next_word = 1;
     long *addr = (long*)p_reg;

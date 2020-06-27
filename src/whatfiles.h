@@ -45,7 +45,7 @@ void build_output(
 );
 void get_mode(unsigned long long m, char *mode);
 void get_command(pid_t current_pid, char *command, size_t len);
-bool peek_filename(pid_t pid, unsigned long long p_reg, struct String *str);
+bool peek_filename(pid_t pid, unsigned long p_reg, struct String *str);
 // void toggle_status(pid_t current_pid, HashMap map);
 bool is_exiting(pid_t pid, unsigned long long syscall);
 char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override, bool *attach);
