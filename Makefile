@@ -1,11 +1,12 @@
 CC = gcc
 CFLAGS = -Wall
 SOURCES = $(addprefix src/, whatfiles.c attach.c utilities.c hashmap.c strings.c)
+ARCH_DIR = $(shell uname -p)
 
 all: bin/whatfiles
 
 bin/whatfiles: $(SOURCES)
-	$(CC) $(CFLAGS) -o $@ $(SOURCES)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) src/$(ARCH_DIR)/registers.c
 
 # utils
 

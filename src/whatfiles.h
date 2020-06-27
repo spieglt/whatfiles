@@ -30,6 +30,9 @@ typedef struct {
 
 extern LastSyscall_t LastSyscall;
 
+// whatfiles.c
+void check_ptrace_event(pid_t current_pid, int proc_status, HashMap map);
+
 // utilities.c
 void build_output(
     char *mode,
@@ -57,5 +60,10 @@ void detach_from_process(HashMap map);
 void read_file(struct String *str, size_t size, FILE *file);
 char read_status(pid_t pid);
 bool read_task(pid_t tid, struct String *str);
+
+// architecture-specific, registers.c
+void check_syscall(pid_t current_pid, void *registers, HashMap map);
+bool step_syscall(pid_t current_pid, int proc_status, HashMap map);
+
 
 #endif /* !WHATFILES_H */
