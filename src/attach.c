@@ -16,10 +16,9 @@
 
 void read_file(struct String *str, size_t size, FILE *file)
 {
-    char c;
+    int c;
     for (size_t read = 0; read < size && (c = fgetc(file)) != EOF; read++) {
-        if (c == 255) break; // necessary on Raspbian, not sure why fgetc doesn't seem to return EOF == 0xffffffff for /proc/[PID]/comm
-        append_char(c, str);
+        append_char((char)c, str);
     }
 }
 

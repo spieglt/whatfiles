@@ -25,10 +25,6 @@ void check_syscall(pid_t current_pid, void *registers, HashMap map)
     size_t index;
     HashError err = find_index(current_pid, map, &index);
     if (err) DEBUG("unknown pid %d, syscall %ld\n", current_pid, regs->ARM_r7);
-    // struct String *proc_string = err ? NULL : &map->names[index];
-    // char *proc_name = proc_string && proc_string->data && *proc_string->data
-    //     ? proc_string->data
-    //     : "[unknown]";
 
     switch (regs->ARM_r7)
     {
