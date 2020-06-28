@@ -16,9 +16,9 @@
 
 void read_file(struct String *str, size_t size, FILE *file)
 {
-    char c;
+    int c;
     for (size_t read = 0; read < size && (c = fgetc(file)) != EOF; read++) {
-        append_char(c, str);
+        append_char((char)c, str);
     }
 }
 

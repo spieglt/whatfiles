@@ -30,11 +30,14 @@ typedef struct {
 
 extern LastSyscall_t LastSyscall;
 
+// whatfiles.c
+void check_ptrace_event(pid_t current_pid, int proc_status, HashMap map);
+
 // utilities.c
 void build_output(
     char *mode,
     char *syscall_name,
-    unsigned long long reg,
+    unsigned long reg,
     pid_t pid,
     struct String *filename,
     struct String *result,
@@ -42,7 +45,7 @@ void build_output(
 );
 void get_mode(unsigned long long m, char *mode);
 void get_command(pid_t current_pid, char *command, size_t len);
-bool peek_filename(pid_t pid, unsigned long long p_reg, struct String *str);
+bool peek_filename(pid_t pid, unsigned long p_reg, struct String *str);
 // void toggle_status(pid_t current_pid, HashMap map);
 bool is_exiting(pid_t pid, unsigned long long syscall);
 char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override, bool *attach);
@@ -57,5 +60,10 @@ void detach_from_process(HashMap map);
 void read_file(struct String *str, size_t size, FILE *file);
 char read_status(pid_t pid);
 bool read_task(pid_t tid, struct String *str);
+
+// architecture-specific, registers.c
+void check_syscall(pid_t current_pid, void *registers, HashMap map);
+bool step_syscall(pid_t current_pid, int proc_status, HashMap map);
+
 
 #endif /* !WHATFILES_H */
