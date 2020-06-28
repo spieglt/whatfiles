@@ -29,21 +29,21 @@ void check_syscall(pid_t current_pid, void *registers, HashMap map)
     switch (regs->ARM_r7)
     {
     case SYS_execve:
-        DEBUG("PID %d exec'd. orig_rax: %ld\n", current_pid, regs->ARM_r7);
+        DEBUG("PID %d exec'd. r7: %ld\n", current_pid, regs->ARM_r7);
         if (peek_filename(current_pid, regs->ARM_ORIG_r0, &filename)) {
             DEBUG("associated process %d with name \"%s\"\n", current_pid, filename.data);
             set_name(current_pid, filename.data, map);
         }
         break;
     case SYS_fork:
-        DEBUG("PID %d forked. orig_rax: %ld\n", current_pid, regs->ARM_r7);
+        DEBUG("PID %d forked. r7: %ld\n", current_pid, regs->ARM_r7);
         break;
     case SYS_clone:
         flags = regs->ARM_ORIG_r0;
         newsp = regs->ARM_r1;
         parent_tid = ptrace(PTRACE_PEEKDATA, current_pid, (void*)regs->ARM_r2, 0);
         child_tid = ptrace(PTRACE_PEEKDATA, current_pid, (void*)regs->ARM_r4, 0);
-        DEBUG("PID %d cloned. orig_rax: %ld, flags: 0x%ld, newsp: 0x%ld, parent pid: %d, child pid: %d\n", 
+        DEBUG("PID %d cloned. r7: %ld, flags: 0x%ld, newsp: 0x%ld, parent pid: %d, child pid: %d\n",
             current_pid, regs->ARM_r7, flags, newsp, parent_tid, child_tid);
         break;
     case SYS_creat:
@@ -75,7 +75,7 @@ void check_syscall(pid_t current_pid, void *registers, HashMap map)
         OUTPUT("%s", output.data);
         break;
     default:
-        // DEBUG("syscall: %lld, pid: %d, %s\n", regs->orig_rax, current_pid, proc_name);
+        // DEBUG("syscall: %lld, pid: %d, %s\n", regs->ARM_r7, current_pid, proc_name);
         break;
     }
     free(filename.data);
