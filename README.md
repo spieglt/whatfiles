@@ -51,6 +51,7 @@ $ cd whatfiles
 $ make
 $ sudo make install
 ```
+Only supports x86_64 and ARM32. (ARM written/tested on a Raspberry Pi 4 with Cortex A72 64-bit running in compatibility mode for 32-bit Raspbian. Should work on all Raspberry Pis, please create an issue if it doesn't.)
 
 ## Questions that could be asked at some point:
 
@@ -64,12 +65,8 @@ $ sudo make install
 
 ## Known issues:
 
-- Only works on x86_64.
-
 - Tabs crash when `whatfiles` is used to launch Firefox. (Attaching with `-p [PID]` once it's running works fine, as does using `whatfiles` to launch a second Firefox window if one's already open.)
 
 ## Planned features:
-
-- Support ARM64. I've ordered a Raspberry Pi for the purpose.
 
 Thank you for your interest, and please also check out [Cloaker](https://github.com/spieglt/cloaker), [Nestur](https://github.com/spieglt/nestur), and [Flying Carpet](https://github.com/spieglt/flyingcarpet)!
