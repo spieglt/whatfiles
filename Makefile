@@ -1,7 +1,13 @@
 CC = gcc
 CFLAGS = -Wall
 SOURCES = $(addprefix src/, whatfiles.c attach.c utilities.c hashmap.c strings.c)
-ARCH_DIR = $(shell uname -m)
+
+ARCH = $(shell uname -m)
+ifeq ($(findstring arm,$(ARCH)), arm)
+	ARCH_DIR = arm32
+else
+	ARCH_DIR = x86_64
+endif
 
 all: bin/whatfiles
 
