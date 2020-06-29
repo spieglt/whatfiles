@@ -5,6 +5,8 @@ SOURCES = $(addprefix src/, whatfiles.c attach.c utilities.c hashmap.c strings.c
 ARCH = $(shell uname -m)
 ifeq ($(findstring arm,$(ARCH)), arm)
 	ARCH_DIR = arm32
+else ifeq ($(findstring aarch64,$(ARCH)), aarch64)
+	ARCH_DIR = arm64
 else
 	ARCH_DIR = x86_64
 endif
