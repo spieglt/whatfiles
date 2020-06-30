@@ -1,5 +1,5 @@
 # whatfiles
-Whatfiles is a Linux utility that logs what files other programs read/write/create/delete on your system. It traces any new processes and threads that are created as well.
+Whatfiles is a Linux utility that logs what files another program reads/writes/creates/deletes on your system. It traces any new processes and threads that are created by the targeted process as well.
 
 ## Rationale:
 I've long been frustrated at the lack of a simple utility to see which files a process touches from `main()` to exit. Whether you don't trust a software vendor or are concerned about malware, it's important to be able to know what a program or installer does to your system. `lsof` only observes a moment in time and `strace` is large and somewhat complicated.
@@ -51,7 +51,7 @@ $ cd whatfiles
 $ make
 $ sudo make install
 ```
-Only supports x86_64 and ARM32. (ARM written/tested on a Raspberry Pi 4 with Cortex A72 64-bit running in compatibility mode for 32-bit Raspbian. Should work on all Raspberry Pis, please create an issue if it doesn't.)
+Supports x86_64, ARM32, and ARM64 architectures. Both ARM versions written on a Raspberry Pi 4 with normal Raspbian and the new 64-bit beta.
 
 ## Questions that could be asked at some point:
 
