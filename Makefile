@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -std=gnu99
 SOURCES = $(addprefix src/, whatfiles.c attach.c utilities.c hashmap.c strings.c)
 
 ARCH = $(shell uname -m)
