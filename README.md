@@ -69,4 +69,6 @@ Supports x86_64, ARM32, and ARM64 architectures. Both ARM versions written on a 
 
 ## Planned features:
 
+- None currently, open to requests and PRs.
+
 Thank you for your interest, and please also check out [Cloaker](https://github.com/spieglt/cloaker), [Nestur](https://github.com/spieglt/nestur), and [Flying Carpet](https://github.com/spieglt/flyingcarpet)!
