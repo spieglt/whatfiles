@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <regex.h>
 #include <signal.h>
 #include <stddef.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 
 FILE *Handle = (FILE*)NULL;
 int Debug = 0;
+regex_t regex;
 LastSyscall_t LastSyscall;
 DebugStats_t DebugStats;
 
@@ -91,6 +93,10 @@ int main(int argc, char* argv[])
     struct HashMap hm = {0};
     HashMap hashmap = &hm;
     init_hashmap(hashmap);
+
+    if (regcomp(&regex, "State:\\W+([A-Za-z])", REG_EXTENDED) != 0) {
+        SYS_ERR("regex compilation error");
+    }
 
     int start_of_user_command = discover_flags(argc, argv);
     char *user_filename = parse_flags(start_of_user_command, argv, &pid, &stdout_override, &attach);
@@ -210,6 +216,7 @@ int main(int argc, char* argv[])
         }
     }
 
+    regfree(&regex);
     err = destroy(hashmap);
     HASH_ERR_CHECK(err, "tried to free null pointers in hashmap.\n")
     fclose(Handle);

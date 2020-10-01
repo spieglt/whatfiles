@@ -37,13 +37,9 @@ char read_status(pid_t pid)
     if (!h_status) return 0;
     read_file(str, 4096, h_status);
 
-    regex_t regex;
     int err;
     regmatch_t pmatch[2];
-    if (regcomp(&regex, "State:\\W+([A-Za-z])", REG_EXTENDED) != 0)
-        SYS_ERR("regex compilation error");
     err = regexec(&regex, str->data, 2, pmatch, 0);
-    regfree(&regex);
     if (err) {
         DEBUG("failed to find regex match in /proc/%d/status file\n", pid);
     } else {

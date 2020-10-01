@@ -2,6 +2,7 @@
 #define WHATFILES_H
 
 #include <errno.h>
+#include <regex.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -9,6 +10,7 @@
 
 extern int Debug;
 extern FILE *Handle;
+extern regex_t regex;
 
 #define MODE_LEN 32
 #define OUTPUT(...) fprintf(Handle, __VA_ARGS__)
