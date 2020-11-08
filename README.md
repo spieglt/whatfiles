@@ -46,7 +46,7 @@ mode:  read, file: /usr/lib/libgimpcolor-2.0.so.0, syscall: openat(), PID: 8574,
     `$ sudo whatfiles -p 1234`
     
 ## Distribution
-Ready-to-use binaries are on the [releases](https://github.com/spieglt/releases) page! Someone also kindly added it to the [Arch](https://aur.archlinux.org/packages/whatfiles-git/) repository, and [letompouce](https://github.com/letompouce) set up a [GitLab](https://gitlab.com/l3tompouce/builders/whatfiles) pipeline as well.
+Ready-to-use binaries are on the [releases](https://github.com/spieglt/whatfiles/releases) page! Someone also kindly added it to the [Arch](https://aur.archlinux.org/packages/whatfiles-git/) repository, and [letompouce](https://github.com/letompouce) set up a [GitLab](https://gitlab.com/l3tompouce/builders/whatfiles) pipeline as well.
 
 ## Compilation (requires `gcc` and `make`):
 ```
