@@ -54,7 +54,7 @@ $ cd whatfiles
 $ make
 $ sudo make install
 ```
-Supports x86_64, ARM32, and ARM64 architectures. Both ARM versions written on a Raspberry Pi 4 with normal Raspbian and the new 64-bit beta.
+Supports x86, x86_64, ARM32, and ARM64 architectures.
 
 ## Questions that could be asked at some point:
 
