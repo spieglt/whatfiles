@@ -20,6 +20,9 @@ all: bin/whatfiles
 bin/whatfiles: $(SOURCES)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) src/$(ARCH_DIR)/registers.c
 
+bin/androidWhatfiles: $(SOURCES)
+	~/android-ndk-r21e/toolchains/llvm/prebuilt/linux-x86_64/bin/clang -target aarch64-linux-android21 $(CFLAGS) -o $@ $(SOURCES) src/arm64/registers.c
+
 # utils
 
 install:
