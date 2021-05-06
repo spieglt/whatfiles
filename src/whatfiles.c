@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     HashMap hashmap = &hm;
     init_hashmap(hashmap);
 
-    if (regcomp(&regex, "State:\\W+([A-Za-z])", REG_EXTENDED) != 0) {
+    if (regcomp(&regex, "State:[[:space:]]*([A-Za-z])", REG_EXTENDED) != 0) {
         SYS_ERR("regex compilation error");
     }
 

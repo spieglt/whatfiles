@@ -36,13 +36,12 @@ char read_status(pid_t pid)
     FILE *h_status = fopen(path, "rb");
     if (!h_status) return 0;
     read_file(str, 4096, h_status);
-    DEBUG("PROC FILE\n%s", str->data);
 
     int err;
     regmatch_t pmatch[2];
     err = regexec(&regex, str->data, 2, pmatch, 0);
     if (err) {
-        DEBUG("failed to find regex match in /proc/%d/status file: 0x%x\n", pid, err);
+        DEBUG("failed to find regex match in /proc/%d/status file\n", pid);
     } else {
         c = *(str->data + pmatch[1].rm_so);
     }
