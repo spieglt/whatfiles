@@ -2,6 +2,8 @@ CC = gcc
 CFLAGS = -Wall -std=gnu99
 SOURCES = $(addprefix src/, whatfiles.c attach.c utilities.c hashmap.c strings.c)
 
+INSTALL = /usr/bin/install -c
+
 ARCH = $(shell uname -m)
 ifeq ($(findstring arm,$(ARCH)), arm)
 	ARCH_DIR = arm32
@@ -22,8 +24,8 @@ bin/whatfiles: $(SOURCES)
 
 # utils
 
-install:
-	cp ./bin/whatfiles /usr/local/bin/whatfiles
+install: bin/whatfiles
+	${INSTALL} ./bin/whatfiles /usr/local/bin/whatfiles
 
 clean:
 	rm -rf bin/*
