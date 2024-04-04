@@ -158,6 +158,11 @@ char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override, boo
                 fprintf(stderr, "Bad PID %s given, must be integer.\n", optarg);
                 exit(1);
             }
+            // check if the given `pid` is valid
+            if (getpgid(*pid) < 0) {
+                fprintf(stderr, "Bad PID %s given. PID is not valid or does not exist.\n", optarg);
+                exit(1);
+            }
             break;
         case 's':
             *stdout_override = true;

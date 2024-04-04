@@ -224,7 +224,6 @@ int main(int argc, char* argv[])
 
 /*
 TODO:
-confirm process exists for -p flag
 debug flag for use by hashdriver
 more hashmap tests?
 better allocator/destructor for String
