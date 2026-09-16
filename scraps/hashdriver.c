@@ -1,91 +1,103 @@
-#include <stdbool.h>
+// Exercises the task map in src/hashmap.c on its own.
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <assert.h>
-#include <wait.h>
 
 #include "../src/hashmap.h"
 
 #define INSERT_NUM 5000
 
-#define RESET(map)         \
-    {                      \
-        destroy(map);      \
-        init_hashmap(map); \
-    }
-
-DebugStats_t DebugStats = {0};
-
-void insert_test(HashMap map, bool with_names) {
+static void insert_test(HashMap map, bool with_names)
+{
     int num = 100000;
     for (int i = 0; i < num; i++) {
-        int r = rand();
-        insert(r, 1, map);
-        size_t idx = 0;
-        find_index(r, map, &idx);
-        if (!map->names[idx].data && with_names) {
-            set_name(r, "yeah what's up", map);
-        }
+        pid_t pid = (pid_t)(rand() % 4000000 + 1);
+        Task *task = map_insert(map, pid);
+        assert(task != NULL);
+        assert(map_find(map, pid) == task);
+        if (with_names && !task->name.len) str_append_cstr(&task->name, "yeah what's up");
     }
-    printf("collisions: %d\nsteps: %d\n", DebugStats.collisions, DebugStats.steps);
-    printf("used: %ld\n", map->used);
-    // there will be duplicates so this will fail. should pass on mac which doesn't repeat randoms till MAX_RAND-1
-    // assert(map->used == num);
+    printf("live entries: %zu\n", map_count(map));
 }
 
-void delete_test(HashMap map)
+static void delete_test(HashMap map)
 {
-    for (int i = 0; i < map->size; i++) {
-        if (map->keys[i]) {
-            remove_pid(map->keys[i], map);
-        }
-    }
+    size_t iter = 0;
+    pid_t pid;
+    // Collect first: removing entries while iterating would skip some.
+    pid_t *pids = malloc(map_count(map) * sizeof *pids);
+    size_t n = 0;
+    while (map_next(map, &iter, &pid, NULL)) pids[n++] = pid;
+    for (size_t i = 0; i < n; i++) assert(map_remove(map, pids[i]));
+    assert(map_count(map) == 0);
+    free(pids);
 }
 
-void memory_leak_test()
+// A key that probed past another one must still be findable, and insertable,
+// after that other key is removed.
+static void tombstone_test(void)
 {
-    struct HashMap hashmap;
-    HashMap m = &hashmap;
+    struct HashMap hm = {0};
+    HashMap map = &hm;
+    pid_t first = 5000, second = 5000 + INITIAL_SIZE;   // same home slot
+
+    map_init(map);
+    map_insert(map, first);
+    map_insert(map, second);
+    assert(map_count(map) == 2);
+    assert(map_remove(map, first));
+    assert(map_find(map, second) != NULL);
+    map_insert(map, second);            // must not create a second copy
+    assert(map_count(map) == 1);
+    assert(map_remove(map, second));
+    assert(map_count(map) == 0);
+    assert(map_find(map, second) == NULL);
+    map_destroy(map);
+    printf("tombstone test passed\n");
+}
+
+static void memory_leak_test(void)
+{
+    struct HashMap hm = {0};
+    HashMap map = &hm;
     for (int i = 0; i < 5; i++) {
-        init_hashmap(m);
-        insert_test(m, true);
-        delete_test(m);
-        insert_test(m, false);
-        delete_test(m);
-        HashError err = destroy(m);
-        if (err) {
-            printf("could not destroy\n");
-            exit(1);
-        }
+        map_init(map);
+        insert_test(map, true);
+        delete_test(map);
+        insert_test(map, false);
+        delete_test(map);
+        map_destroy(map);
     }
 }
 
-int main()
+int main(void)
 {
-    srand(time(0));
+    struct HashMap hm = {0};
+    HashMap map = &hm;
 
-    struct HashMap m;
-    HashMap map = &m;
-    init_hashmap(map);
+    srand((unsigned)time(0));
+    tombstone_test();
+
+    map_init(map);
     insert_test(map, true);
-    
-    RESET(map);
-    // destroy(map);
+    map_destroy(map);
 
-    int pids[INSERT_NUM] = {0};
-    int counts[INSERT_NUM] = {0};
+    map_init(map);
+    pid_t *pids = malloc(INSERT_NUM * sizeof *pids);
     for (int i = 0; i < INSERT_NUM; i++) {
-        pids[i] = rand();
-        counts[i] = rand();
-        insert(pids[i], counts[i], map);
+        pids[i] = (pid_t)(i + 1);
+        Task *task = map_insert(map, pids[i]);
+        task->flags = (unsigned long long)i;
     }
     for (int i = 0; i < INSERT_NUM; i++) {
-        size_t res = 0;
-        get_status(pids[i], map, &res);
-        assert(res == counts[i]);
+        Task *task = map_find(map, pids[i]);
+        assert(task && task->flags == (unsigned long long)i);
     }
-    destroy(map);
-    printf("done\n");
+    free(pids);
+    map_destroy(map);
+
     memory_leak_test();
+    printf("done\n");
+    return 0;
 }

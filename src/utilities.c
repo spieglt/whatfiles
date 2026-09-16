@@ -1,169 +1,213 @@
-#include <assert.h>
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <limits.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/ptrace.h>
+#include <sys/uio.h>
+#include <unistd.h>
 
-#include "string.h"
 #include "whatfiles.h"
 
-char *FLAGS = "ado:p:s";
+#define MAX_PATH_BYTES 4096
 
-void build_output(
-    char *mode,
-    char *syscall_name,
-    unsigned long reg,
-    pid_t pid,
-    struct String *filename,
-    struct String *result,
-    HashMap map
-)
+// Word-at-a-time fallback for kernels or configurations where
+// process_vm_readv() is unavailable. errno distinguishes a real failure from a
+// word whose value happens to be -1, which the old code could not do.
+static bool peek_data(pid_t pid, unsigned long long addr, void *buf, size_t len)
 {
-    size_t index;
-    HashError err = find_index(pid, map, &index); // find_index() returns OK = 0 or NOT_FOUND = 1
-    struct String *proc_string = err ? NULL : &map->names[index];
-
-    char mode_str[MODE_LEN] = {0};
-    // grab detected mode or the raw number
-    *mode ? sprintf(mode_str, "%5s", mode) : sprintf(mode_str, "0x%lX", reg);
-    append_str("mode: ", strlen("mode: "), result);
-    append_str(mode_str, strlen(mode_str), result);
-
-    append_str(", file: ", strlen(", file: "), result);
-    append_str(filename->data, strlen(filename->data), result);
-
-    append_str(", syscall: ", strlen(", syscall: "), result);
-    append_str(syscall_name, strlen(syscall_name), result);
-
-    char pid_str[MODE_LEN] = {0};
-    sprintf(pid_str, ", PID: %d", pid);
-    append_str(pid_str, strlen(pid_str), result);
-
-    // make sure proc_string points to a `struct String`, that the String has been initialized, and that the first char isn't just a null byte
-    char *proc_name = proc_string && proc_string->data && *proc_string->data
-        ? proc_string->data
-        : "[unknown]";
-    append_str(", process: ", strlen(", process: "), result);
-    append_str(proc_name, strlen(proc_name), result);
-    append_str("\n", strlen("\n"), result);
-}
-
-void get_mode(unsigned long long m, char *mode)
-{
-    char *strings[] = {"read", "write", "rd/wr", "create"};
-    int modes[] = {O_RDONLY, O_WRONLY, O_RDWR, O_CREAT};
-    for (int i=0; i<4; i++) {
-        if (m & modes[i] || m == modes[i]) {
-            assert(strlen(strings[i]) < MODE_LEN);
-            strcpy(mode, strings[i]);
-        }
+    size_t done = 0;
+    while (done < len) {
+        errno = 0;
+        long word = ptrace(PTRACE_PEEKDATA, pid, (void *)(uintptr_t)(addr + done), NULL);
+        if (word == -1 && errno) return false;
+        size_t chunk = (len - done < sizeof word) ? len - done : sizeof word;
+        memcpy((char *)buf + done, &word, chunk);
+        done += chunk;
     }
+    return true;
 }
 
-void get_command(pid_t current_pid, char *command, size_t len)
+bool read_tracee_data(pid_t pid, unsigned long long addr, void *buf, size_t len)
 {
-    char proc_str[64] = {0};
-    FILE *proc_file;
-    sprintf(proc_str, "/proc/%d/cmdline", current_pid);
-    proc_file = fopen(proc_str, "r");
-    if (proc_file) {
-        getline(&command, &len, proc_file);
-        fclose(proc_file);
+    struct iovec local = { buf, len };
+    struct iovec remote = { (void *)(uintptr_t)addr, len };
+    if (process_vm_readv(pid, &local, 1, &remote, 1, 0) == (ssize_t)len) return true;
+    return peek_data(pid, addr, buf, len);
+}
+
+bool read_tracee_string(pid_t pid, unsigned long long addr, struct String *out)
+{
+    char chunk[256];
+    unsigned long long pos = addr;
+
+    str_clear(out);
+    if (!addr) {
+        str_append_cstr(out, "(null)");
+        return true;
     }
-}
-
-bool peek_filename(pid_t pid, unsigned long p_reg, struct String *str)
-{
-    char get_next_word = 1;
-    long *addr = (long*)p_reg;
-    do {
-        // get next long-sized chunk of data from the address
-        long res = ptrace(PTRACE_PEEKDATA, pid, (void*)addr, 0);
-        if (res == -1) return 0;
-        // iterate over it, appending to our filepath string, bailing if we encounter a null character
-        for (int i = 0; i < sizeof(res); i++) {
-            char current_byte = (char)(res >> (8*i) & 0xFF);
-            if (current_byte) {
-                append_char(current_byte, str);
-            } else {
-                get_next_word = 0;
-                break;
-            }
-        }
-        addr++;
-    } while (get_next_word);
-    return 1;
-}
-
-// void toggle_status(pid_t current_pid, HashMap map)
-// {
-//     size_t index;
-//     HashError err = find_index(current_pid, map, &index);
-//     HASH_ERR_CHECK(err, "index not found in map when trying to change syscall status");
-//     // if (map->status[index]) decrement(current_pid, map);
-//     // else increment(current_pid, map);
-//     if (map->status[index] == ENTRY) err = insert(current_pid, EXIT, map);
-//     else if (map->status[index] == EXIT) err = insert(current_pid, ENTRY, map);
-//     else SYS_ERR("syscall status not 0 or 1");
-// }
-
-// Returns whether the current ptrace stop is an entry to a syscall or exit from one, which we track by comparing it to the previous one.
-// Can return false positives, if multiple threads of a single process/PID enter the same syscall before either exits; can also return false negatives,
-// if multiple threads of a single process/PID enter different syscalls before either exits.
-bool is_exiting(pid_t pid, unsigned long long syscall)
-{
-    return pid == LastSyscall.pid && syscall == LastSyscall.syscall;
-}
-
-// return index within argv of the beginning of the user's command and end of whatfiles' flags
-// no: now that we're attaching to processes, we aren't necessarily going to have a beginning of command
-// so need to return index of last whatfiles arg.
-int discover_flags(int argc, char *argv[])
-{
-    int i;
-    for (i = 1; i < argc; i++) {
-        char *current_arg = argv[i];
-        char *last_arg = argv[i-1];
-        char last_char = last_arg[strlen(last_arg)-1];
-        if (*current_arg == '-') {
-            continue; // in an option
-        } else if (*last_arg == '-' && (last_char == 'o' || last_char == 'p')) {
-            continue; // not in an option, but in argument to option
-        }
-        return i; // if still here, we're at the user's command
+    while (out->len < MAX_PATH_BYTES) {
+        // Never read past a page boundary: the next page may not be mapped.
+        size_t to_page = 4096 - (size_t)(pos & 4095);
+        size_t want = sizeof chunk;
+        if (want > to_page) want = to_page;
+        if (want > MAX_PATH_BYTES - out->len) want = MAX_PATH_BYTES - out->len;
+        if (!read_tracee_data(pid, pos, chunk, want)) return out->len > 0;
+        char *end = memchr(chunk, '\0', want);
+        str_append(out, chunk, end ? (size_t)(end - chunk) : want);
+        if (end) return true;
+        pos += want;
     }
-    return i;
+    str_append_cstr(out, "...");
+    return true;
 }
 
-char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override, bool *attach)
+/*
+Reads a path argument and makes it absolute. A relative path means nothing on
+its own in a log: it is resolved against the directory the tracee passed, or
+against its working directory for AT_FDCWD and the plain (non-*at) syscalls.
+*/
+void read_tracee_path(pid_t pid, int dirfd, unsigned long long addr, struct String *out)
 {
-    int c;
+    struct String raw = {0};
+    char link[64];
+    char target[PATH_MAX];
+
+    str_init(&raw, 256);
+    read_tracee_string(pid, addr, &raw);
+    str_clear(out);
+
+    if (raw.len == 0 || raw.data[0] == '/' || strcmp(raw.data, "(null)") == 0) {
+        str_append(out, raw.data, raw.len);
+        str_free(&raw);
+        return;
+    }
+    if (dirfd == AT_FDCWD) snprintf(link, sizeof link, "/proc/%d/cwd", (int)pid);
+    else snprintf(link, sizeof link, "/proc/%d/fd/%d", (int)pid, dirfd);
+
+    ssize_t len = readlink(link, target, sizeof target - 1);
+    if (len <= 0 || target[0] != '/') {
+        str_append(out, raw.data, raw.len);   // best effort: report what was passed
+        str_free(&raw);
+        return;
+    }
+    target[len] = '\0';
+    str_append_cstr(out, target);
+    if (out->len && out->data[out->len - 1] != '/') str_append_char(out, '/');
+    // "./name" and "name" name the same file; keep the log readable.
+    {
+        const char *rest = raw.data;
+        size_t remaining = raw.len;
+        while (remaining >= 2 && rest[0] == '.' && rest[1] == '/') {
+            rest += 2;
+            remaining -= 2;
+        }
+        str_append(out, rest, remaining);
+    }
+    str_free(&raw);
+}
+
+static void append_flag(char *buf, size_t len, const char *flag)
+{
+    size_t used = strlen(buf);
+    if (used + 1 < len) snprintf(buf + used, len - used, "%s", flag);
+}
+
+/*
+Describes what a syscall does to the file. For the open family this is decoded
+from the `flags` argument: the access mode lives in the low two bits, and
+O_CREAT, O_TRUNC and O_APPEND say the file is written even when the access mode
+alone would not.
+*/
+void format_mode(SyscallKind kind, unsigned long long flags, char *out, size_t len)
+{
+    const char *base;
+
+    switch (kind) {
+    case SC_OPEN:
+    case SC_OPENAT:
+    case SC_OPENAT2:
+    case SC_CREAT:
+        switch (flags & O_ACCMODE) {
+        case O_RDONLY: base = "read"; break;
+        case O_WRONLY: base = "write"; break;
+        case O_RDWR:   base = "rd/wr"; break;
+        default:
+            snprintf(out, len, "0x%llX", flags);
+            return;
+        }
+        snprintf(out, len, "%s", base);
+        if (flags & O_CREAT) append_flag(out, len, "+create");
+        if (flags & O_TRUNC) append_flag(out, len, "+trunc");
+        if (flags & O_APPEND) append_flag(out, len, "+append");
+#ifdef O_TMPFILE
+        if ((flags & O_TMPFILE) == O_TMPFILE) append_flag(out, len, "+tmpfile");
+#endif
+        return;
+
+    case SC_UNLINK:    base = "delete"; break;
+    case SC_UNLINKAT:  base = (flags & AT_REMOVEDIR) ? "rmdir" : "delete"; break;
+    case SC_RMDIR:     base = "rmdir"; break;
+    case SC_MKDIR:
+    case SC_MKDIRAT:   base = "mkdir"; break;
+    case SC_RENAME:
+    case SC_RENAMEAT:
+    case SC_RENAMEAT2: base = "rename"; break;
+    case SC_LINK:
+    case SC_LINKAT:    base = "link"; break;
+    case SC_SYMLINK:
+    case SC_SYMLINKAT: base = "symlink"; break;
+    case SC_TRUNCATE:  base = "trunc"; break;
+    case SC_CHMOD:
+    case SC_FCHMODAT:  base = "chmod"; break;
+    case SC_CHOWN:
+    case SC_LCHOWN:
+    case SC_FCHOWNAT:  base = "chown"; break;
+    case SC_EXECVE:
+    case SC_EXECVEAT:  base = "exec"; break;
+    default:           base = "?"; break;
+    }
+    snprintf(out, len, "%s", base);
+}
+
+char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override,
+                  bool *attach, bool *kill_on_exit)
+{
     char *filename = NULL;
-    while ((c = getopt(argc, argv, FLAGS)) != -1) {
-        switch(c)
-        {
+    int c;
+
+    // The leading '+' stops option parsing at the first non-option argument, so
+    // optind is left pointing at the start of the traced program's command line.
+    while ((c = getopt(argc, argv, "+ado:p:sk")) != -1) {
+        switch (c) {
         case 'a':
             about();
             break;
         case 'd':
             Debug = 1;
             break;
+        case 'k':
+            *kill_on_exit = true;
+            break;
         case 'o':
             filename = optarg;
             break;
-        case 'p':
+        case 'p': {
+            char *end = NULL;
+            long value;
+            errno = 0;
+            value = strtol(optarg, &end, 10);
+            if (errno || !end || *end != '\0' || value < 1 || value > INT_MAX) {
+                FATAL("bad PID '%s': expected a positive integer\n", optarg);
+            }
+            if (getpgid((pid_t)value) < 0) {
+                FATAL("bad PID '%s': %s\n", optarg, strerror(errno));
+            }
+            *pid = (pid_t)value;
             *attach = true;
-            *pid = atoi(optarg);
-            if (!*pid || *pid < 1) {
-                fprintf(stderr, "Bad PID %s given, must be integer.\n", optarg);
-                exit(1);
-            }
-            // check if the given `pid` is valid
-            if (getpgid(*pid) < 0) {
-                fprintf(stderr, "Bad PID %s given. PID is not valid or does not exist.\n", optarg);
-                exit(1);
-            }
-            break;
+            break; }
         case 's':
             *stdout_override = true;
             break;
@@ -187,17 +231,18 @@ char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override, boo
     return filename;
 }
 
-void usage()
+void usage(void)
 {
     fprintf(stderr, "\n                ======== Usage ========\n");
-    fprintf(stderr, "Whatfiles can be used to log what files a process accesses, and in what mode.\n");
-    fprintf(stderr, "To track the entire lifetime of a program, use it (and whatever arguments) after whatfiles flags.\n");
-    fprintf(stderr, "You can also attach to a currently-running program, though this requires root privileges.\n");
+    fprintf(stderr, "Whatfiles logs what files a process accesses, in what mode, and whether it succeeded.\n");
+    fprintf(stderr, "To follow a program for its whole life, put it (and its arguments) after whatfiles' flags.\n");
+    fprintf(stderr, "You can also attach to a running program, which usually requires root privileges.\n");
     fprintf(stderr, "\n                ======== Flags ========\n");
     fprintf(stderr, "    -o ./output.log : specify log file location\n");
-    fprintf(stderr, "    -p [PID]        : attach to currently running process (requires sudo)\n");
+    fprintf(stderr, "    -p [PID]        : attach to currently running process (usually requires sudo)\n");
     fprintf(stderr, "    -s              : output to stdout rather than log file\n");
     fprintf(stderr, "    -d              : include debug output\n");
+    fprintf(stderr, "    -k              : kill the traced program if whatfiles is killed\n");
     fprintf(stderr, "    -a              : print about/license\n");
     fprintf(stderr, "\n               ======== Examples ========\n");
     fprintf(stderr, "Basic use, write what files the calendar uses to log:\n");
@@ -208,12 +253,12 @@ void usage()
     fprintf(stderr, "    $ sudo whatfiles -p 1234\n");
     fprintf(stderr, "Watch what files an installation creates and name the log:\n");
     fprintf(stderr, "    $ sudo whatfiles -o ./firefox.log apt install firefox\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
-void about()
+void about(void)
 {
-    char *about_message = 
+    char *about_message =
 "https://github.com/spieglt/whatfiles\n"
 "Copyright (C) 2020 Theron Spiegl. All rights reserved.\n\n"
 
@@ -231,5 +276,5 @@ void about()
 "    You should have received a copy of the GNU General Public License\n"
 "    along with this program.  If not, see <https://www.gnu.org/licenses/>.\n";
     printf("%s\n", about_message);
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
