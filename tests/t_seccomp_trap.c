@@ -63,7 +63,7 @@ int main(void)
     ssize_t n;
     int fd;
 
-    brokered_fd = open("/etc/hostname", O_RDONLY);
+    brokered_fd = open("/proc/self/status", O_RDONLY);
     if (brokered_fd < 0) {
         perror("open");
         return 2;
@@ -77,7 +77,7 @@ int main(void)
         fprintf(stderr, "SKIP: seccomp unavailable: %s\n", strerror(errno));
         return 77;
     }
-    fd = open("/etc/hostname", O_RDONLY);   // trapped, brokered by the handler
+    fd = open("/proc/self/status", O_RDONLY);   // trapped, brokered by the handler
     n = read(fd, buf, sizeof buf);
     fprintf(stderr, "sandboxed open() returned %d, SIGSYS handler ran %d time(s), read() returned %zd\n",
             fd, (int)sigsys_count, n);

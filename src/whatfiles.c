@@ -68,7 +68,15 @@ static void open_log(const char *user_filename, bool stdout_override)
         // sudo, so refuse to follow a symlink or overwrite an existing file.
         fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0644);
     }
-    if (fd == -1) SYS_ERR("could not open output file");
+    if (fd == -1) {
+        int saved = errno;
+        fprintf(stderr, "whatfiles: could not create log file %s: %s\n", path, strerror(saved));
+        // The working directory is often not writable, on Android especially.
+        if (!user_filename) {
+            fprintf(stderr, "use -o to put the log somewhere else, or -s to write to stdout\n");
+        }
+        exit(saved ? saved : EXIT_FAILURE);
+    }
     // O_CLOEXEC above keeps this descriptor out of the traced program.
     Handle = fdopen(fd, "w");
     if (!Handle) SYS_ERR("could not open output file");

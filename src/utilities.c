@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/ptrace.h>
+#include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
 
@@ -30,11 +31,29 @@ static bool peek_data(pid_t pid, unsigned long long addr, void *buf, size_t len)
     return true;
 }
 
-bool read_tracee_data(pid_t pid, unsigned long long addr, void *buf, size_t len)
+/*
+Reads another process's memory in one call. This goes through syscall() rather
+than the libc wrapper because bionic only declares process_vm_readv() from API
+23, and the raw call works on every libc. Build with -DWF_NO_PROCESS_VM_READV to
+force the slower ptrace path, which is also what happens at runtime when a
+sandbox or an SELinux policy denies the call.
+*/
+static bool vm_readv(pid_t pid, unsigned long long addr, void *buf, size_t len)
 {
+#if defined(SYS_process_vm_readv) && !defined(WF_NO_PROCESS_VM_READV)
     struct iovec local = { buf, len };
     struct iovec remote = { (void *)(uintptr_t)addr, len };
-    if (process_vm_readv(pid, &local, 1, &remote, 1, 0) == (ssize_t)len) return true;
+    long got = syscall(SYS_process_vm_readv, (long)pid, &local, 1L, &remote, 1L, 0L);
+    return got == (long)len;
+#else
+    (void)pid; (void)addr; (void)buf; (void)len;
+    return false;
+#endif
+}
+
+bool read_tracee_data(pid_t pid, unsigned long long addr, void *buf, size_t len)
+{
+    if (vm_readv(pid, addr, buf, len)) return true;
     return peek_data(pid, addr, buf, len);
 }
 
@@ -180,6 +199,8 @@ char *parse_flags(int argc, char *argv[], pid_t *pid, bool *stdout_override,
 
     // The leading '+' stops option parsing at the first non-option argument, so
     // optind is left pointing at the start of the traced program's command line.
+    // Libcs that do not read '+' that way, bionic and the BSDs, do not reorder
+    // arguments in the first place, so the effect is the same there.
     while ((c = getopt(argc, argv, "+ado:p:sk")) != -1) {
         switch (c) {
         case 'a':

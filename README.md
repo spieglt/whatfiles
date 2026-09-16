@@ -57,6 +57,35 @@ Supports x86, x86_64, ARM32, and ARM64 architectures. `make install` honors `PRE
 
 Linux 3.4 or newer is required. On Linux 5.3 and newer, whatfiles asks the kernel directly about each syscall stop, which is what makes 32-bit syscalls on a 64-bit machine decode correctly; on older kernels it falls back to reading registers.
 
+### Android
+
+Cross-compile with the NDK, then push the binary to the device:
+
+```
+$ make android NDK=~/Android/Sdk/ndk/<version>
+$ adb push bin/whatfiles-android /data/local/tmp/whatfiles
+$ adb shell chmod 755 /data/local/tmp/whatfiles
+$ adb shell /data/local/tmp/whatfiles -o /data/local/tmp/ls.log ls /sdcard
+```
+
+`ANDROID_ABI` selects `arm64`, the default, or `arm32`, `x86_64` or `x86`. `ANDROID_API` sets the
+minimum API level and defaults to 21.
+
+A few things differ on a device:
+
+- Put the binary in `/data/local/tmp`. `/sdcard` is mounted without execute permission.
+- The working directory in `adb shell` is not writable, so pass `-o` with a path under
+  `/data/local/tmp`, or `-s` to write to stdout.
+- Running a command under whatfiles works as the ordinary shell user, and so does attaching to a
+  process that user started. Attaching to anything else, an app for instance, needs root, so
+  `adb root` on a userdebug build. On an Android 14 emulator that worked with SELinux enforcing;
+  a production device's policy may still refuse.
+- `make test-android NDK=~/Android/Sdk/ndk/<version>` builds whatfiles and the test programs for
+  the connected device, runs the checks there, and removes what it pushed.
+- A 32-bit app traced from an arm64 build is read with the 32-bit syscall numbers and argument
+  registers rather than being taken for a 64-bit one. That path has not been exercised on real
+  hardware: the emulator used for testing here has no 32-bit ABI.
+
 `make test` builds the programs in `tests/` and runs them under whatfiles to check its behavior, including signal delivery, thread and child-process coverage, and interrupt handling.
 
 ## Questions that could be asked at some point:
