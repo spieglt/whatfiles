@@ -253,6 +253,11 @@ void usage(void)
     fprintf(stderr, "    $ sudo whatfiles -p 1234\n");
     fprintf(stderr, "Watch what files an installation creates and name the log:\n");
     fprintf(stderr, "    $ sudo whatfiles -o ./firefox.log apt install firefox\n");
+    fprintf(stderr, "\n                ======== About ========\n");
+    fprintf(stderr, "whatfiles by Theron Spiegl <theron@spiegl.dev>\n");
+    fprintf(stderr, "Copyright (C) 2020-2026 Theron Spiegl.\n");
+    fprintf(stderr, "Free software under the GNU General Public License, version 3 or later.\n");
+    fprintf(stderr, "Run `whatfiles -a` for the full license notice.\n");
     exit(EXIT_FAILURE);
 }
 
@@ -260,7 +265,7 @@ void about(void)
 {
     char *about_message =
 "https://github.com/spieglt/whatfiles\n"
-"Copyright (C) 2020 Theron Spiegl. All rights reserved.\n\n"
+"Copyright (C) 2020-2026 Theron Spiegl. All rights reserved.\n\n"
 
 "Whatfiles is a Linux utility used to log what files another program accesses and in what mode, "
 "as well as that program's child processes and threads.\n\n"
