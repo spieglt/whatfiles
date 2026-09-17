@@ -71,24 +71,35 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
 
-  cross-compile:
-    name: arm32 and 32-bit x86 build
+  # Kept in separate jobs: gcc-multilib and the arm cross toolchain conflict on
+  # the runner image, and a failure here should say which target broke.
+  cross-compile-arm32:
+    name: arm32 build
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: install cross toolchains
+      - name: install the arm toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf gcc-multilib
+          sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf
 
-      - name: arm32
+      - name: build
         run: make CC=arm-linux-gnueabihf-gcc ARCH_DIR=arm32 CFLAGS="-O2 -Werror"
 
-      - name: 32-bit x86
+  cross-compile-x86:
+    name: 32-bit x86 build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install 32-bit headers and libraries
         run: |
-          make clean
-          make CC="gcc -m32" ARCH_DIR=x86 CFLAGS="-O2 -Werror"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-multilib
+
+      - name: build
+        run: make CC="gcc -m32" ARCH_DIR=x86 CFLAGS="-O2 -Werror"
 
   android:
     name: android, every ABI
