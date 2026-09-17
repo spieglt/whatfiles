@@ -23,7 +23,7 @@ jobs:
             runner: ubuntu-24.04-arm
             arch_dir: arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: build, warnings are errors
         run: make CFLAGS="-O2 -g -Werror"
@@ -58,7 +58,7 @@ jobs:
     name: address and undefined behavior
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: build with sanitizers
         run: |
@@ -77,7 +77,7 @@ jobs:
     name: arm32 build
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: install the arm toolchain
         run: |
@@ -105,7 +105,7 @@ jobs:
     name: 32-bit x86 build
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: install 32-bit headers and libraries
         run: |
@@ -119,7 +119,7 @@ jobs:
     name: android, every ABI
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: build with the NDK
         run: |
