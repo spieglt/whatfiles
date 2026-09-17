@@ -85,7 +85,17 @@ jobs:
           sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf
 
       - name: build
-        run: make CC=arm-linux-gnueabihf-gcc ARCH_DIR=arm32 CFLAGS="-O2 -Werror"
+        run: |
+          if ! make CC=arm-linux-gnueabihf-gcc ARCH_DIR=arm32 CFLAGS="-O2 -Werror" > /tmp/build.log 2>&1; then
+            cat /tmp/build.log
+            # Surface the compiler output as annotations, readable without
+            # admin rights on the repository.
+            grep -E 'error|warning' /tmp/build.log | head -12 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit 1
+          fi
+          cat /tmp/build.log
 
   cross-compile-x86:
     name: 32-bit x86 build
