@@ -227,10 +227,12 @@ else
 fi
 
 # --------------------------------------------- a refused attach must not freeze
-sleep 30 &
+sleep 5 &
 victim=$!
 sleep 0.3
-"$WHATFILES" -s -p $victim >/dev/null 2>&1
+# A timeout, since this attach succeeds where ptrace_scope permits it and fails
+# where it does not. Either way the target must not be left stopped.
+timeout 5 "$WHATFILES" -s -p $victim >/dev/null 2>&1
 sleep 0.3
 state=$(ps -o stat= -p $victim 2>/dev/null | tr -d ' ')
 case "$state" in

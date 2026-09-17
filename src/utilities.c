@@ -275,7 +275,7 @@ void usage(void)
     fprintf(stderr, "Watch what files an installation creates and name the log:\n");
     fprintf(stderr, "    $ sudo whatfiles -o ./firefox.log apt install firefox\n");
     fprintf(stderr, "\n                ======== About ========\n");
-    fprintf(stderr, "whatfiles by Theron Spiegl <theron@spiegl.dev>\n");
+    fprintf(stderr, "whatfiles version %s, by Theron Spiegl <theron@spiegl.dev>\n", WHATFILES_VERSION);
     fprintf(stderr, "Copyright (C) 2020-2026 Theron Spiegl.\n");
     fprintf(stderr, "Free software under the GNU General Public License, version 3 or later.\n");
     fprintf(stderr, "Run `whatfiles -a` for the full license notice.\n");
@@ -285,6 +285,7 @@ void usage(void)
 void about(void)
 {
     char *about_message =
+"whatfiles version " WHATFILES_VERSION "\n"
 "https://github.com/spieglt/whatfiles\n"
 "Copyright (C) 2020-2026 Theron Spiegl. All rights reserved.\n\n"
 

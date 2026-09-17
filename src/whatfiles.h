@@ -17,6 +17,8 @@ extern FILE *Handle;
 extern int Debug;
 extern volatile sig_atomic_t Interrupted;   // set by the SIGINT/SIGTERM handler
 
+#define WHATFILES_VERSION "2.0"
+
 #define OUTPUT(...) fprintf(Handle, __VA_ARGS__)
 #define DEBUG(...) do { if (Debug) OUTPUT(__VA_ARGS__); } while (0)
 // perror() can change errno, so the exit status is taken first.

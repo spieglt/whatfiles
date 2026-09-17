@@ -22,29 +22,35 @@ the program is handed the syscall number as if it were a file descriptor.
 
 #if defined(__x86_64__)
 #define SECCOMP_ARCH AUDIT_ARCH_X86_64
-#define RESULT_REG REG_RAX
+#define SET_RESULT(ctx, value) ((ctx)->uc_mcontext.gregs[REG_RAX] = (value))
 #elif defined(__i386__)
 #define SECCOMP_ARCH AUDIT_ARCH_I386
-#define RESULT_REG REG_EAX
+#define SET_RESULT(ctx, value) ((ctx)->uc_mcontext.gregs[REG_EAX] = (value))
+#elif defined(__aarch64__)
+#define SECCOMP_ARCH AUDIT_ARCH_AARCH64
+#define SET_RESULT(ctx, value) ((ctx)->uc_mcontext.regs[0] = (value))
+#elif defined(__arm__)
+#define SECCOMP_ARCH AUDIT_ARCH_ARM
+#define SET_RESULT(ctx, value) ((ctx)->uc_mcontext.arm_r0 = (value))
 #endif
 
 static int brokered_fd = -1;
 static volatile sig_atomic_t sigsys_count = 0;
 
-#ifdef RESULT_REG
+#ifdef SET_RESULT
 static void sigsys_handler(int sig, siginfo_t *info, void *context)
 {
     ucontext_t *ctx = context;
     (void)sig;
     (void)info;
     sigsys_count++;
-    ctx->uc_mcontext.gregs[RESULT_REG] = dup(brokered_fd);   // dup() is not trapped
+    SET_RESULT(ctx, dup(brokered_fd));   // dup() is not trapped
 }
 #endif
 
 int main(void)
 {
-#ifndef RESULT_REG
+#ifndef SET_RESULT
     fprintf(stderr, "SKIP: no SIGSYS emulation for this architecture\n");
     return 77;
 #else

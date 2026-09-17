@@ -1,4 +1,6 @@
 # whatfiles
+[![build and test](https://github.com/spieglt/whatfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/spieglt/whatfiles/actions/workflows/ci.yml)
+
 Whatfiles is a Linux utility that logs what files another program reads/writes/creates/deletes on your system. It traces any new processes and threads that are created by the targeted process as well, and records whether each operation succeeded.
 
 ## Rationale:
@@ -18,7 +20,7 @@ mode: delete, file: /tmp/demo/renamed.txt, syscall: unlinkat(), PID: 17008, proc
 
 Each line says what was done to the file, the file itself, which syscall did it, which process and thread, and what the kernel returned. Paths are always absolute: relative paths are resolved against the process's working directory, or against the directory it passed to an `*at()` syscall. `result` is the syscall's return value, so failed and successful access can be told apart.
 
-Besides opening, creating and deleting, whatfiles reports `rename`, `link`, `symlink`, `mkdir`, `rmdir`, `truncate`, `chmod`, `chown` and `exec` of a program.
+Besides opening, creating and deleting, whatfiles reports `rename`, `link`, `symlink`, `mkdir`, `rmdir`, `truncate`, `chmod`, `chown` and `exec` of a program. [SYSCALLS.md](SYSCALLS.md) covers what is not reported yet and why each addition would be worth making.
 
 ## Use:
 

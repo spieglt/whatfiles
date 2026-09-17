@@ -1,0 +1,104 @@
+name: build and test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: test on ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            arch_dir: x86_64
+          # arm64 runners are free for public repositories, and this is the only
+          # place the arm64 register code actually runs rather than just compiling.
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            arch_dir: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build, warnings are errors
+        run: make CFLAGS="-O2 -g -Werror"
+
+      - name: task map unit test
+        run: make bin/hashmap && ./bin/hashmap
+
+      - name: test suite
+        run: ./tests/run_tests.sh
+
+      # Kernels before 5.3 cannot be asked whether a stop is a syscall entry or
+      # exit, so whatfiles reads registers and tracks it per thread instead.
+      - name: build without kernel syscall info
+        run: |
+          gcc -std=gnu99 -Wall -Wextra -Werror -O2 -DWF_NO_SYSCALL_INFO \
+            -o /tmp/whatfiles-fallback src/*.c src/${{ matrix.arch_dir }}/registers.c
+
+      - name: test suite, reading registers
+        run: WHATFILES=/tmp/whatfiles-fallback ./tests/run_tests.sh
+
+      # A sandbox or an SELinux policy can refuse process_vm_readv, leaving the
+      # word-at-a-time ptrace path.
+      - name: build without process_vm_readv
+        run: |
+          gcc -std=gnu99 -Wall -Wextra -Werror -O2 -DWF_NO_PROCESS_VM_READV \
+            -o /tmp/whatfiles-peek src/*.c src/${{ matrix.arch_dir }}/registers.c
+
+      - name: test suite, reading memory through ptrace
+        run: WHATFILES=/tmp/whatfiles-peek ./tests/run_tests.sh
+
+  sanitizers:
+    name: address and undefined behavior
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build with sanitizers
+        run: |
+          gcc -std=gnu99 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
+            -o /tmp/whatfiles-asan src/*.c src/x86_64/registers.c
+
+      - name: test suite
+        run: WHATFILES=/tmp/whatfiles-asan ./tests/run_tests.sh
+        env:
+          ASAN_OPTIONS: detect_leaks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+  cross-compile:
+    name: arm32 and 32-bit x86 build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install cross toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf gcc-multilib
+
+      - name: arm32
+        run: make CC=arm-linux-gnueabihf-gcc ARCH_DIR=arm32 CFLAGS="-O2 -Werror"
+
+      - name: 32-bit x86
+        run: |
+          make clean
+          make CC="gcc -m32" ARCH_DIR=x86 CFLAGS="-O2 -Werror"
+
+  android:
+    name: android, every ABI
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build with the NDK
+        run: |
+          for abi in arm64 arm32 x86_64 x86; do
+            echo "== $abi"
+            make android NDK="$ANDROID_NDK_LATEST_HOME" ANDROID_ABI="$abi" CFLAGS="-O2 -Werror"
+          done
