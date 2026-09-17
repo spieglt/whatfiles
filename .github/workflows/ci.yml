@@ -82,7 +82,11 @@ jobs:
       - name: install the arm toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf
+          # The C library and kernel headers for the target are Recommends of the
+          # compiler package, so they have to be named explicitly here, or the
+          # cross compiler reads the host's /usr/include and fails.
+          sudo apt-get install -y --no-install-recommends \
+            gcc-arm-linux-gnueabihf libc6-dev-armhf-cross linux-libc-dev-armhf-cross
 
       - name: build
         run: |
