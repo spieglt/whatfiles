@@ -1,0 +1,111 @@
+name: release
+
+# Publishing a release builds the binaries and attaches them to it. For a
+# release that already exists, run this by hand and give it the tag.
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: tag of an existing release to attach binaries to
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  linux:
+    name: linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      # Statically linked, so the binary does not depend on the runner's glibc
+      # being newer than the machine it ends up on.
+      - name: build
+        run: make CFLAGS="-O2 -static"
+
+      - name: the binary reports the version in the tag
+        run: |
+          expected=${TAG#v}
+          actual=$(./bin/whatfiles -a | head -1 | awk '{print $3}')
+          test "$expected" = "$actual" || {
+            echo "::error::tag $TAG expects version $expected, binary says $actual"
+            exit 1
+          }
+
+      - name: test suite
+        run: ./tests/run_tests.sh
+
+      - name: attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name=whatfiles-$TAG-linux-${{ matrix.arch }}
+          cp bin/whatfiles "$name"
+          sha256sum "$name" > "$name.sha256"
+          gh release upload "$TAG" "$name" "$name.sha256" --clobber
+
+  linux-arm32:
+    name: linux arm32
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: install the arm toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-arm-linux-gnueabihf libc6-dev-armhf-cross linux-libc-dev-armhf-cross
+
+      - name: build
+        run: make CC=arm-linux-gnueabihf-gcc ARCH_DIR=arm32 CFLAGS="-O2 -static"
+
+      - name: attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name=whatfiles-$TAG-linux-arm32
+          cp bin/whatfiles "$name"
+          sha256sum "$name" > "$name.sha256"
+          gh release upload "$TAG" "$name" "$name.sha256" --clobber
+
+  android:
+    name: android
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      # Dynamically linked: every device has bionic, and static linking against
+      # it is not supported.
+      - name: build every ABI
+        run: |
+          for abi in arm64 arm32 x86_64 x86; do
+            make android NDK="$ANDROID_NDK_LATEST_HOME" ANDROID_ABI="$abi" CFLAGS="-O2"
+            mv bin/whatfiles-android "whatfiles-$TAG-android-$abi"
+          done
+
+      - name: attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha256sum whatfiles-$TAG-android-* > "whatfiles-$TAG-android.sha256"
+          gh release upload "$TAG" whatfiles-$TAG-android-* "whatfiles-$TAG-android.sha256" --clobber
